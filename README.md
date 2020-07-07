@@ -1,8 +1,7 @@
 # bc_camping
  
-_Hey! I've created this camping script. You can craft a tent, and fill it with materials like TheForest style. Also a Campfire, and a bed.
-Its pretty optimized (0.038ms on profiler view). If you want to add new stuff, you are free to do it, you can even do a PR. :)
-_
+_Hey! I've created this camping script. You can craft a tent, and fill it with materials like TheForest style. Also a Campfire, and a bed._
+_Its pretty optimized (0.038ms on profiler view). If you want to add new stuff, you are free to do it, you can even do a PR. :)_
  
 ### WHAT YOU CAN DO📋
 - You can craft a "skeleton tent", and you will need some materials in order to craft a real Tent. (configurable)
