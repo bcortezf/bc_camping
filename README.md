@@ -39,6 +39,7 @@ _Special thanks to:_
 * [warxander](https://github.com/warxander/warmenu) - For his WarMenu script
 * [Ktos93](https://github.com/Ktos93/redemrp_notification) - For the notification script
 * [Netholinus](http://steamcommunity.com/id/Netholinus/) - Who helped me test and fix some bugs
+And the RedM Official Scripting discord for helping with some questions :P
  
 ## Contribute 🖇️
  
