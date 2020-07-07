@@ -1,4 +1,4 @@
-
+![bc_camping](https://i.imgur.com/8R5hQwa.png)
 # bc_camping
  
 _Hey! I've created this camping script. You can craft a tent, and fill it with materials like TheForest style. Also a Campfire, and a bed._
