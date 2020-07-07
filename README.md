@@ -31,7 +31,7 @@ __G__ : Open / Close Menu
  
 _Special thanks to:_
  
-* [me](http://github.com/Benjannabis) - for the development
+* [me](http://github.com/bcortezf) - for the development
 * [warxander](https://github.com/warxander/warmenu) - For his WarMenu script
 * [Ktos93](https://github.com/Ktos93/redemrp_notification) - For the notification script
 * [Netholinus](http://steamcommunity.com/id/Netholinus/) - Who helped me test and fix some bugs
