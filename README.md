@@ -12,15 +12,17 @@ https://streamable.com/sd2xxz
 - You can craft a Campfire, turn it on and off.
 - You can open and close your Tent.
 - You can craft a Bed and sleep on it.
+- You can make a hitching post for your horse
 
 ### WORK TO-DO📋
 - Make the tent stay after server restart. (SQL needed)
-- Add more furniture, like a piece of wood where you can attach your horse.
-- Let you cook in the campfire, and upgrade it.
+- Add more furniture, like chairs, tables, storage, etc...
+- Let you upgrade your campfire and cook on it. (With animations, etc..)
 - Tell me more ideas! :3
  
 Add this to your server.cfg
 You will need **redemrp_notification**, you can replace it if you want!
+
 ```
 ensure bc_camping
 ensure redemrp_notification
