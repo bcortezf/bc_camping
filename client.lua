@@ -7,21 +7,9 @@ Feel free to change anything, if you want to share your modification you can mak
 ]]
 
 
--- _test_campfire_interact_base   -- REVISAR
---mp001_s_campfire01x_mp
--- ESTE OBJETO ESTARÍA BUENO PONERLO UN RATO CUANDO SE APAGA LA FOGATA, Y LUEGO PASA A COMPLETAMENTE APAGADA
 
-
---[[[[[ CONFIG ]]
-
-local Config = {}
-Config.Tent = {}
-Config.Tent.DistanceToInteract = 9.0 -- In Units
-Config.Tent.DistanceToSleepInBed = 1.5 -- In Units
-
-
-local Tent={}
-local Campfire={}
+Tent={}
+Campfire={}
 
 -- [[============| FUNCTIONS AREA |=========]] --
 
@@ -63,6 +51,29 @@ function addBlipForCoords(blipname,bliphash,coords)
         SetBlipScale(Tent.Blip,0.2)
         Citizen.InvokeNative(0x9CB1A1623062F402, Tent.Blip, blipname)
     end
+   
+end
+
+
+-- Here I get the front coords of the player, and I check if there is of the specified prop on the radius.
+-- If there is an entity, that means that the player is trying to build the campfire inside or very near the tent
+-- So the idea is to block the crafting if that happens
+-- You can see the img to understand better what is happening (Paint is the best lmao) https://i.imgur.com/PCZ2c7T.png
+-- It is really necessary? I dont know. Can it be done in a better way? I think so
+function IsThereAnyPropInFrontOfPed(playerPed,frontOffset,radius)
+
+
+		for k,v in pairs(Config.PropsNearby) do
+	        local x,y,z = table.unpack(GetOffsetFromEntityInWorldCoords(playerPed, 0.0, 2.5, 0))
+			local tentEntity = (GetClosestObjectOfType(x,y,z, 2.5, GetHashKey(v), false, false, false))
+			
+			if tentEntity ~= 0 then
+				return true
+			end
+		end
+
+		return false
+
    
 end
 
@@ -108,6 +119,7 @@ local playerPed = nil
 local playerCoords = nil
 local playerHeading = nil
 local isPlayerNearTent = nil
+local isPlayerNearCampfire = nil
 local isPedBuildingTent = nil
 local tentroll = 0
 
@@ -122,11 +134,14 @@ Tent.Pos = nil
 Tent.PosHeading=nil
 Tent.BedPos=nil
 Tent.isBedCreated=false
+Tent.isHitchingPostCreated = false
 
 --change it to config
 Tent.RequiredItems = { ["wood"]=5, ["leather"]=3 }
 Tent.ActualItems = { ["wood"]=0, ["leather"]=0 }
 
+Campfire.RequiredItems = { ["wood"]=5, ["rock"]=5 }
+Campfire.ActualItems = { ["wood"]=0, ["rock"]=0 }
 
 
 
@@ -141,9 +156,6 @@ Campfire.Pos = nil
 Campfire.PosHeading=nil
 
 
---change it to config
-Campfire.RequiredItems = { ["wood"]=5, ["rock"]=5 }
-Campfire.ActualItems = { ["wood"]=0, ["rock"]=0 }
 
 
 
@@ -164,7 +176,7 @@ Citizen.CreateThread(function()
 
 		if Tent.Prop then
 			isPlayerNearTent = IsPlayerNearEntityWithDistance(Tent.Prop,Config.Tent.DistanceToInteract)
-
+			isPlayerNearCampfire = IsPlayerNearEntityWithDistance(Campfire.Prop,Config.Campfire.DistanceToInteract)
 			Tent.Pos=GetEntityCoords(Tent.Prop)
 			Tent.PosHeading=GetEntityHeading(Tent.Prop)
 		end
@@ -196,6 +208,12 @@ WarMenu.CreateMenu('Tent', 'Tienda de Campaña')
 
 
         if isPlayerNearTent then
+
+        	if not hasAlertInteractKey and Tent.isCreated then
+				hasAlertInteractKey=true
+				TriggerEvent("redemrp_notification:start", "Presiona G para interactuar con la tienda" , 4, "success")
+			end
+
             if IsControlPressed(0, 0x760A9C6F) and not IsControlPressed(0,0x8FFC75D6) then -- Open Menu if Player hit G near the Tent, but it wont open if SHIFT+G is pressed (bc_sitchair)
                 if not WarMenu.IsMenuOpened('Tent') then
                      WarMenu.OpenMenu('Tent')
@@ -235,10 +253,34 @@ WarMenu.CreateMenu('Tent', 'Tienda de Campaña')
                                     end
                             end
 
+                            	if not Tent.isHitchingPostCreated then
+	                        		if WarMenu.Button('Fabricar Poste para caballo') then
+
+	                        			local propInFrontOfPed = IsThereAnyPropInFrontOfPed(playerPed,1.5,2.0)
+
+	                        	 	   	if propInFrontOfPed then
+	                                    	TriggerEvent("redemrp_notification:start", "No puedes contruir aquí" , 2, "warning")
+	                                    else
+	                                    	exports['progressBars']:startUI(7000, "Fabricando palo")
+		                                    for i=1,5 do
+		                                        playAnim("mini_games@story@beechers@build_floor@john","hammer_loop_good")
+		                                        Citizen.Wait(1500)
+		                                    end
+
+											local x,y,z = table.unpack(GetOffsetFromEntityInWorldCoords(playerPed, 0.0, 2.4, 0))
+											local prop = CreateObject(GetHashKey("p_hitchingPost04x"), x,y,z+2, true, false, true)  
+		                                    SetEntityAsMissionEntity(prop,playerHeading)
+											PlaceObjectOnGroundProperly(prop)
+											Tent.HitchingPostProp=prop
+											Tent.isHitchingPostCreated=true
+		                                   
+	                            		end
+	                        		end -- end of HitchingPost button
+	                        	end-- End of isHitchingPostCreated
+
                     else -- If Tent is not finished
 
                             if WarMenu.Button('Craftear Tienda') then
-
                             	--This basically populates the current items for crafting.
 								-- You must edit this so it checks if you have the necessary items and remove them from your inventory
 
@@ -247,7 +289,7 @@ WarMenu.CreateMenu('Tent', 'Tienda de Campaña')
                                 	-- If both tables are equals, like if you have filled the actualItems with the requiredItems
                                 	-- It completes the crafting
                                     playAnim("mech_pickup@saddle@putdown_saddle","putdown")
-                                    Citizen.Wait(800)
+                                    Citizen.Wait(850)
                                     local x,y,z = table.unpack(GetOffsetFromEntityInWorldCoords(playerPed, 0.0, 1.0, 0))
                                     tentroll = CreateObject(GetHashKey("S_CVAN_TENTROLL01"), x, y, z, true, false, true)    
                                     SetEntityAsMissionEntity(tentroll)
@@ -280,9 +322,6 @@ WarMenu.CreateMenu('Tent', 'Tienda de Campaña')
                                         end
                                     end
                                 end
-
-
-
                             end--end Crafting Tent
 
                     end
@@ -298,42 +337,40 @@ WarMenu.CreateMenu('Tent', 'Tienda de Campaña')
                         	-- So the idea is to block the crafting if that happens
                         	-- You can see the img to understand better what is happening (Paint is the best lmao) https://i.imgur.com/PCZ2c7T.png
                         	-- It is really necessary? I dont know. Can it be done in a better way? I think so
-                            local frontPedX,frontPedY,frontPedZ = table.unpack(GetOffsetFromEntityInWorldCoords(PlayerPedId(), 0,2.5, 0.0,0.0))
-                            local tentEntity = (GetClosestObjectOfType(frontPedX,frontPedY,frontPedZ, 2.5, GetHashKey("S_TENT_MAROPEN01X"), false, false, false))
-                            local tentClosedEntity = (GetClosestObjectOfType(frontPedX,frontPedY,frontPedZ, 2.5, GetHashKey("S_TENT_MARCLOSED01X"), false, false, false))
-                            local tentNotFinishedEntity = (GetClosestObjectOfType(frontPedX,frontPedY,frontPedZ, 2.5, GetHashKey("S_TENTCARAVAN01C"), false, false, false))
+                            		
+                                	local propInFrontOfPed = IsThereAnyPropInFrontOfPed(playerPed,2.5,2.5)
+                                	print(propInFrontOdPed)
 
-                                if not (GetEntityModel(tentEntity) == GetHashKey("S_TENT_MAROPEN01X"))
-                                and not (GetEntityModel(tentClosedEntity) == GetHashKey("S_TENT_MARCLOSED01X"))
-                                and not (GetEntityModel(tentNotFinishedEntity) == GetHashKey("S_TENTCARAVAN01C"))
-                                then
-                                    local x,y,z = table.unpack(GetOffsetFromEntityInWorldCoords(playerPed, 0.0, 2.4, 0))
-                                    Campfire.Prop = CreateObject(GetHashKey("P_CAMPFIRE_WIN2_01X"), x, y, z-2, true, false, true)   
-                                    SetEntityAsMissionEntity(Campfire.Prop)
-                                    SetEntityHeading(Campfire.Prop, playerHeading)
-                                        for i=1,1 do
-                                            playAnim("mini_games@story@beechers@build_floor@john","hammer_loop_good")
-                                            Citizen.Wait(1500)
-                                        end
-                                    local a=GetEntityCoords(Campfire.Prop)
-                                    local b=(a.z+0.9)
-                                        for i=(a.z+0.7),b,0.01 do
-                                            SetEntityCoords(Campfire.Prop,a.x,a.y,i,false,false,false,false)
-                                            Citizen.Wait(45)
-                                        end
-                                    PlaceObjectOnGroundProperly(Campfire.Prop)
-                                    Campfire.isCreated = true
-                                    Campfire.isOff=true
-                                    Citizen.Wait(4000)
-                                else -- If one of those entities is found, it will warn the player
-                                    TriggerEvent("redemrp_notification:start", "No puedes hacer una fogata cerca de la tienda" , 2, "warning")
-                                end
+                        	 	   	if propInFrontOfPed then
+                                    	TriggerEvent("redemrp_notification:start", "No puedes contruir aquí" , 2, "warning")
+                                    else
+
+	                                    local x,y,z = table.unpack(GetOffsetFromEntityInWorldCoords(playerPed, 0.0, 2.4, 0))
+	                                    Campfire.Prop = CreateObject(GetHashKey("P_CAMPFIRE_WIN2_01X"), x, y, z-2, true, false, true)   
+	                                    SetEntityAsMissionEntity(Campfire.Prop)
+	                                    SetEntityHeading(Campfire.Prop, playerHeading)
+	                                        for i=1,1 do
+	                                            playAnim("mini_games@story@beechers@build_floor@john","hammer_loop_good")
+	                                            Citizen.Wait(1500)
+	                                        end
+	                                    local a=GetEntityCoords(Campfire.Prop)
+	                                    local b=(a.z+0.9)
+	                                        for i=(a.z+0.7),b,0.03 do
+	                                            SetEntityCoords(Campfire.Prop,a.x,a.y,i,false,false,false,false)
+	                                            Citizen.Wait(45)
+	                                        end
+	                                    PlaceObjectOnGroundProperly(Campfire.Prop)
+	                                    Campfire.isCreated = true
+	                                    Campfire.isOff=true
+                            		end
+
+                               
                         end -- End Fabricar Fogata
                     else
 
                         if not Campfire.isFinished then -- If the camp is not finished it wil let you to craft the campfire
 
-                             if WarMenu.Button('Craftear Fogata') then
+                            if WarMenu.Button('Craftear Fogata') then
                                -- Same as before, it fill the actual items so it will let you craft the campfire
                                
 
@@ -351,9 +388,11 @@ WarMenu.CreateMenu('Tent', 'Tienda de Campaña')
                                     PlaceObjectOnGroundProperly(prop)
                                     Campfire.Prop=prop
                                     Campfire.isFinished=true
+                                else
+                                	TriggerEvent("redemrp_notification:start", "Necesitas 5 de madera y 4 telas" , 2, "warning")
                                 end   
 
-                                 for itemR,valorR in pairs(Campfire.RequiredItems) do
+                                for itemR,valorR in pairs(Campfire.RequiredItems) do
                                     for itemA,valorA in pairs(Campfire.ActualItems) do
                                         if itemA == itemR then
                                             Campfire.ActualItems[itemA] = valorR
@@ -361,35 +400,68 @@ WarMenu.CreateMenu('Tent', 'Tienda de Campaña')
                                     end
                                 end
                             end--End of CreateCampfire button
-                           
                         else -- If the campfire is finished, it means that you can turn it on or off
+                        	if not Campfire.isLogSitCreated then 
+	                        	 if WarMenu.Button('Poner Tronco de Asiento') then 
+	                        	 	   -- It creates the finished campfire
+	                        	 	   local propInFrontOfPed = IsThereAnyPropInFrontOfPed(playerPed,1.5,2.0)
+	                        	 	   
+
+	                        	 	   	if propInFrontOfPed then
+                                        	TriggerEvent("redemrp_notification:start", "No puedes contruir aquí" , 2, "warning")
+                                        else
+                        	 	   			exports['progressBars']:startUI(7000, "Acomodando tronco")
+		                                    for i=1,5 do
+		                                        playAnim("mini_games@story@beechers@build_floor@john","hammer_loop_good")
+		                                        Citizen.Wait(1500)
+		                                    end
+
+	                                    	local x,y,z = table.unpack(GetOffsetFromEntityInWorldCoords(playerPed, 0.0, 2.4, 0))
+		                                    local prop = CreateObject(GetHashKey("p_bench_log01x"), x,y,z, true, false, true)   
+		                                    SetEntityAsMissionEntity(prop)
+		                                    SetEntityHeading(prop, playerHeading)
+		                                    PlaceObjectOnGroundProperly(prop)
+		                                    Campfire.LogProp=prop
+		                                    Campfire.isLogSitCreated=true
+	                        	 	   	end   
+	                        	 	   end
+                        	end
+
                             if Campfire.isOff then
                                     if WarMenu.Button('Endender Fogata') then
-                                        DeleteObject(Campfire.Prop)
-                                        play_sound_frontend("INFO_HIDE", "Ledger_Sounds", true,0,true,0)
-                                        Campfire.Prop = CreateObject(GetHashKey("P_CAMPFIRE01X"), Campfire.Pos.x, Campfire.Pos.y, Campfire.Pos.z+2, true, false, true)    
-                                        SetEntityAsMissionEntity(Campfire.Prop)
-                                        SetEntityHeading(Campfire.Prop, Campfire.PosHeading)
-                                        PlaceObjectOnGroundProperly(Campfire.Prop)
-                                        Campfire.isOff=false
-                                        Citizen.Wait(800)
+                                    	if isPlayerNearCampfire then
+	                                        DeleteObject(Campfire.Prop)
+	                                        play_sound_frontend("INFO_HIDE", "Ledger_Sounds", true,0,true,0)
+	                                        Campfire.Prop = CreateObject(GetHashKey("P_CAMPFIRE01X"), Campfire.Pos.x, Campfire.Pos.y, Campfire.Pos.z+2, true, false, true)    
+	                                        SetEntityAsMissionEntity(Campfire.Prop)
+	                                        SetEntityHeading(Campfire.Prop, Campfire.PosHeading)
+	                                        PlaceObjectOnGroundProperly(Campfire.Prop)
+	                                        Campfire.isOff=false
+	                                        Citizen.Wait(800)
+										else
+											TriggerEvent("redemrp_notification:start", "Debes estar cerca de la fogata" , 2, "warning")
+										end
+
                                     end
                             else
                                     if WarMenu.Button('Apagar Fogata') then
-                                        DeleteObject(Campfire.Prop)
-                                        play_sound_frontend("INFO_HIDE", "Ledger_Sounds", true,0,true,0)
-                                        Campfire.Prop = CreateObject(GetHashKey("P_CAMPFIRE01X_NOFIRE"), Campfire.Pos.x, Campfire.Pos.y, Campfire.Pos.z+2, true, false, true)    
-                                        SetEntityAsMissionEntity(Campfire.Prop)
-                                        SetEntityHeading(Campfire.Prop, Campfire.PosHeading)
-                                        PlaceObjectOnGroundProperly(Campfire.Prop)
-                                        Campfire.isOff=true
-                                        Citizen.Wait(800)
+                                    	if isPlayerNearCampfire then
+	                                        DeleteObject(Campfire.Prop)
+	                                        play_sound_frontend("INFO_HIDE", "Ledger_Sounds", true,0,true,0)
+	                                        Campfire.Prop = CreateObject(GetHashKey("P_CAMPFIRE01X_NOFIRE"), Campfire.Pos.x, Campfire.Pos.y, Campfire.Pos.z+2, true, false, true)    
+	                                        SetEntityAsMissionEntity(Campfire.Prop)
+	                                        SetEntityHeading(Campfire.Prop, Campfire.PosHeading)
+	                                        PlaceObjectOnGroundProperly(Campfire.Prop)
+	                                        Campfire.isOff=true
+	                                        Citizen.Wait(800)
+	                                    else
+                                        	TriggerEvent("redemrp_notification:start", "Debes estar cerca de la fogata" , 2, "warning")
+	                                    end
                                     end
                             end
+
                         end
                     end
-
-                
 
                     -- Bed Handling
                 if Tent.BedProp and Tent.isBedCreated then
@@ -410,10 +482,7 @@ WarMenu.CreateMenu('Tent', 'Tienda de Campaña')
                                         TriggerEvent("redemrp_notification:start", "Debes estar cerca de la cama" , 2, "warning")
                                     end
                                 end
-
-
-                        end
-                        
+                        end       
                 else -- If the bed is not created and not exists
                     if WarMenu.Button('Fabricar Cama') then 
 	                    TaskGotoEntityOffset(playerPed, Tent.Prop, 4000,0.0,3.0,1.0,1500)
@@ -435,12 +504,12 @@ WarMenu.CreateMenu('Tent', 'Tienda de Campaña')
                         Tent.BedPosHeading=GetEntityHeading(Tent.BedProp)
                         Tent.isBedCreated=true
                 	end
-
             	end
 
          		WarMenu.Display()
             end
         else
+        	hasAlertInteractKey=false
 
 	        if WarMenu.IsMenuOpened('Tent') then  -- If the player is far from the tent, and the menu is opened, it will close it
 	            WarMenu.CloseMenu()  
@@ -466,6 +535,7 @@ RegisterCommand('deltienda', function(source, args, rawCommand)
         RemoveBlip(Tent.Blip)
         DeleteObject(Tent.Prop)
         DeleteObject(Tent.BedProp)
+        DeleteObject(Tent.HitchingPostProp)
         Tent={}
         Citizen.Wait(500)
     end
@@ -485,7 +555,7 @@ RegisterCommand('tienda', function(source, args, rawCommand)
         Citizen.Wait(500)
     end
     
-     exports['progressBars']:startUI(18000, "Armando estructura")
+     exports['progressBars']:startUI(15700, "Armando estructura")
      isPedBuildingTent = true
     local x,y,z = table.unpack(GetOffsetFromEntityInWorldCoords(playerPed, 0.0, 4.4, 0))
     Tent.Prop = CreateObject(GetHashKey("S_TENTCARAVAN01C"), x, y, z, true, false, true) 
@@ -513,6 +583,7 @@ RegisterCommand('delfogata', function(source, args, rawCommand)
     if Campfire.Prop~=nil then
         RemoveBlip(Campfire.Blip)
         DeleteObject(Campfire.Prop)
+        DeleteObject(Campfire.LogProp)
         Campfire={}
         Citizen.Wait(500)
     end
