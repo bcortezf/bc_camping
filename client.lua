@@ -52,7 +52,7 @@ function addBlipForCoords(blipname,bliphash,coords)
 end
 
 
--- Here I get the front coords of the player, and I check if there is of the specified prop on the radius.
+-- Here I get the front coords of the player, and I check if there is any of the specified prop on the radius.
 -- If there is an entity, that means that the player is trying to build the campfire inside or very near the tent
 -- So the idea is to block the crafting if that happens
 -- You can see the img to understand better what is happening (Paint is the best lmao) https://i.imgur.com/PCZ2c7T.png
