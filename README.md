@@ -20,12 +20,15 @@ https://streamable.com/sd2xxz
 - Let you upgrade your campfire and cook on it. (With animations, etc..)
 - Tell me more ideas! :3
  
-Add this to your server.cfg
-You will need **redemrp_notification**, you can replace it if you want!
 
+You will need **redemrp_notification** and **progressBars**.
+You can replace it if you want!
+
+Add this to your server.cfg
 ```
-ensure bc_camping
 ensure redemrp_notification
+ensure progressBars
+ensure bc_camping
 ```
  
 # Keybinds 🔧
@@ -38,6 +41,7 @@ __G__ : Open / Close Menu
 _Special thanks to:_
  
 * [me](http://github.com/bcortezf) - for the development
+* [PokeSerGG](https://github.com/PokeSerGG/RedM-Campfire) - For making this script :3
 * [warxander](https://github.com/warxander/warmenu) - For his WarMenu script
 * [Ktos93](https://github.com/Ktos93/redemrp_notification) - For the notification script
 * [Netholinus](http://steamcommunity.com/id/Netholinus/) - Who helped me test and fix some bugs
